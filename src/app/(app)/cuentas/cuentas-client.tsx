@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 type SortKey = "name" | "specialty" | "institution" | "zone" | "birthday" | "last_visit";
 type MissingFilter = "" | "sin_email" | "sin_telefono" | "sin_cumple" | "sin_barrio";
 
-export function CuentasClient({ showAssignee = false }: { showAssignee?: boolean }) {
+export function CuentasClient({ showAssignee = false, initialAssignee = "" }: { showAssignee?: boolean; initialAssignee?: string }) {
   const supa = useMemo(() => supabaseBrowser(), []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
@@ -21,7 +21,7 @@ export function CuentasClient({ showAssignee = false }: { showAssignee?: boolean
   const [fStatus, setFStatus] = useState("");
   const [fSpecialty, setFSpecialty] = useState("");
   const [fMissing, setFMissing] = useState<MissingFilter>("");
-  const [fAssignee, setFAssignee] = useState("");
+  const [fAssignee, setFAssignee] = useState(initialAssignee);
   const [sort, setSort] = useState<SortKey>("name");
 
   async function load() {
