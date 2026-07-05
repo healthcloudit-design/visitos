@@ -7,7 +7,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supa = supabaseServer();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) redirect("/login");
-  const { data: profile } = await supa.from("profiles").select("full_name, lab").eq("id", user.id).single();
+  const { data: profile } = await supa.from("profiles").select("full_name, lab, role").eq("id", user.id).single();
+
+  const role = profile?.role ?? "rep";
+  const isManager = ["supervisor", "gerente", "org_admin", "platform_admin"].includes(role);
+  const isAdmin = ["org_admin", "platform_admin"].includes(role);
 
   return (
     <div className="min-h-screen">
@@ -20,7 +24,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <nav className="flex items-center gap-4 text-sm">
               <Link href="/cuentas" className="text-gray-600 hover:text-brand-700">Cuentas</Link>
               <Link href="/cumpleanos" className="text-gray-600 hover:text-brand-700">Cumpleaños</Link>
-              <Link href="/importar" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Importar</Link>
+              {isManager && (
+                <Link href="/equipo" className="font-medium text-gray-700 hover:text-brand-700">Equipo</Link>
+              )}
+              {isManager && (
+                <Link href="/importar" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Importar</Link>
+              )}
+              {isAdmin && (
+                <Link href="/equipo/usuarios" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Usuarios</Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
@@ -36,7 +48,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 <span className="hidden h-7 w-px bg-gray-200 sm:inline-block" />
               </>
             )}
-            <span className="hidden text-sm text-gray-500 sm:inline">{profile?.full_name ?? user.email}</span>
+            <span className="hidden text-right text-sm text-gray-500 sm:inline">{profile?.full_name ?? user.email}</span>
             <LogoutButton />
           </div>
         </div>
