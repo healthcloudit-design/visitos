@@ -10,9 +10,10 @@ import { StatusBadge } from "@/components/status-badge";
 type SortKey = "name" | "specialty" | "institution" | "zone" | "birthday" | "last_visit";
 type MissingFilter = "" | "sin_email" | "sin_telefono" | "sin_cumple" | "sin_barrio";
 
-export function CuentasClient() {
+export function CuentasClient({ showAssignee = false }: { showAssignee?: boolean }) {
   const supa = useMemo(() => supabaseBrowser(), []);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [fZone, setFZone] = useState("");
@@ -20,6 +21,7 @@ export function CuentasClient() {
   const [fStatus, setFStatus] = useState("");
   const [fSpecialty, setFSpecialty] = useState("");
   const [fMissing, setFMissing] = useState<MissingFilter>("");
+  const [fAssignee, setFAssignee] = useState("");
   const [sort, setSort] = useState<SortKey>("name");
 
   async function load() {
@@ -32,6 +34,23 @@ export function CuentasClient() {
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
+
+  useEffect(() => {
+    if (!showAssignee) return;
+    supa.from("profiles").select("id, full_name").then(({ data }) => {
+      if (data) setNames(Object.fromEntries((data as { id: string; full_name: string }[]).map((p) => [p.id, p.full_name])));
+    });
+  }, [supa, showAssignee]);
+
+  const assigneeName = (a: Account) => names[(a as { assigned_user_id?: string }).assigned_user_id ?? ""] ?? "Sin asignar";
+  const assignees = useMemo(() => {
+    const set = new Map<string, string>();
+    for (const a of accounts) {
+      const id = (a as { assigned_user_id?: string }).assigned_user_id ?? "";
+      if (id) set.set(id, names[id] ?? "—");
+    }
+    return Array.from(set.entries()).sort((x, y) => x[1].localeCompare(y[1]));
+  }, [accounts, names]);
 
   async function toggleVisited(a: Account) {
     const next = !a.visited;
@@ -69,6 +88,7 @@ export function CuentasClient() {
       if (fMissing === "sin_telefono" && (a.phone || a.whatsapp)) return false;
       if (fMissing === "sin_cumple" && a.birthday) return false;
       if (fMissing === "sin_barrio" && (a.neighborhood || a.city)) return false;
+      if (fAssignee && ((a as { assigned_user_id?: string }).assigned_user_id ?? "") !== fAssignee) return false;
       return true;
     });
     const cmp: Record<SortKey, (a: Account, b: Account) => number> = {
@@ -80,7 +100,7 @@ export function CuentasClient() {
       last_visit: (a, b) => (b.last_visit_at ?? "").localeCompare(a.last_visit_at ?? "")
     };
     return [...list].sort(cmp[sort]);
-  }, [accounts, q, fZone, fVisited, fStatus, fSpecialty, fMissing, sort]);
+  }, [accounts, q, fZone, fVisited, fStatus, fSpecialty, fMissing, fAssignee, sort]);
 
   const visitedCount = accounts.filter((a) => a.visited).length;
   const pct = accounts.length ? Math.round((visitedCount / accounts.length) * 100) : 0;
@@ -131,6 +151,12 @@ export function CuentasClient() {
           <option value="sin_cumple">Sin cumpleaños</option>
           <option value="sin_barrio">Sin barrio/localidad</option>
         </select>
+        {showAssignee && (
+          <select className="input !w-auto" value={fAssignee} onChange={(e) => setFAssignee(e.target.value)}>
+            <option value="">Asignado a: todos</option>
+            {assignees.map(([id, nm]) => <option key={id} value={id}>{nm}</option>)}
+          </select>
+        )}
         <select className="input !w-auto" value={sort} onChange={(e) => setSort(e.target.value as SortKey)}>
           <option value="name">Orden: nombre</option>
           <option value="specialty">Orden: especialidad</option>
@@ -154,6 +180,7 @@ export function CuentasClient() {
               <th className="px-3 py-2">Barrio/Loc.</th>
               <th className="px-3 py-2">Teléfono</th>
               <th className="px-3 py-2">Email</th>
+              {showAssignee && <th className="px-3 py-2">Asignado a</th>}
               <th className="px-3 py-2">Cumple</th>
               <th className="px-3 py-2">Últ. visita</th>
               <th className="px-3 py-2">Estado</th>
@@ -177,6 +204,7 @@ export function CuentasClient() {
                 <td className="px-3 py-2">{zone(a) || "—"}</td>
                 <td className="px-3 py-2">{a.phone ?? "—"}</td>
                 <td className="max-w-[180px] truncate px-3 py-2">{a.email ?? "—"}</td>
+                {showAssignee && <td className="px-3 py-2 font-medium text-brand-700">{assigneeName(a)}</td>}
                 <td className="px-3 py-2">{fmtBirthday(a.birthday)}</td>
                 <td className="px-3 py-2">{a.last_visit_at ? fmtDate(a.last_visit_at.split("T")[0]) : "—"}</td>
                 <td className="px-3 py-2"><StatusBadge status={a.status} /></td>
@@ -205,6 +233,7 @@ export function CuentasClient() {
               </p>
               <p className="text-sm text-gray-500">{[a.address, zone(a)].filter(Boolean).join(" · ")}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                {showAssignee && <span className="rounded bg-brand-50 px-1.5 py-0.5 font-medium text-brand-700">Asignado: {assigneeName(a)}</span>}
                 <span>Cumple: {fmtBirthday(a.birthday)}</span>
                 <StatusBadge status={a.status} />
               </div>
