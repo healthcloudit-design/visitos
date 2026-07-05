@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "VisitOS",
+  title: "VisitOS · Praxis Operativa",
   description: "CRM territorial para visitadores médicos"
 };
 

@@ -7,14 +7,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const supa = supabaseServer();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) redirect("/login");
-  const { data: profile } = await supa.from("profiles").select("full_name").eq("id", user.id).single();
+  const { data: profile } = await supa.from("profiles").select("full_name, lab").eq("id", user.id).single();
 
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex items-center gap-5">
-            <Link href="/cuentas" className="text-lg font-bold text-brand-700">VisitOS</Link>
+            <Link href="/cuentas" className="text-lg font-bold text-brand-700">
+              Visit<span className="text-gold-500">OS</span>
+            </Link>
             <nav className="flex items-center gap-4 text-sm">
               <Link href="/cuentas" className="text-gray-600 hover:text-brand-700">Cuentas</Link>
               <Link href="/cumpleanos" className="text-gray-600 hover:text-brand-700">Cumpleaños</Link>
@@ -22,6 +24,18 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             </nav>
           </div>
           <div className="flex items-center gap-3">
+            {profile?.lab && (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/labs/${profile.lab}.png`}
+                  alt={`Laboratorio ${profile.lab}`}
+                  title={`Laboratorio: ${profile.lab}`}
+                  className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200"
+                />
+                <span className="hidden h-6 w-px bg-gray-200 sm:inline-block" />
+              </>
+            )}
             <span className="hidden text-sm text-gray-500 sm:inline">{profile?.full_name ?? user.email}</span>
             <LogoutButton />
           </div>
