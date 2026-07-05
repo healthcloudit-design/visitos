@@ -31,9 +31,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                   src={`/labs/${profile.lab}.png`}
                   alt={`Laboratorio ${profile.lab}`}
                   title={`Laboratorio: ${profile.lab}`}
-                  className="h-8 w-8 rounded-full object-cover ring-1 ring-gray-200"
+                  className="h-10 w-10 rounded-full object-cover ring-1 ring-gray-200"
                 />
-                <span className="hidden h-6 w-px bg-gray-200 sm:inline-block" />
+                <span className="hidden h-7 w-px bg-gray-200 sm:inline-block" />
               </>
             )}
             <span className="hidden text-sm text-gray-500 sm:inline">{profile?.full_name ?? user.email}</span>
