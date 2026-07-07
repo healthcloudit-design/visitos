@@ -10,7 +10,7 @@ import { StatusBadge } from "@/components/status-badge";
 type SortKey = "name" | "specialty" | "institution" | "zone" | "birthday" | "last_visit";
 type MissingFilter = "" | "sin_email" | "sin_telefono" | "sin_cumple" | "sin_barrio";
 
-export function CuentasClient({ showAssignee = false, initialAssignee = "" }: { showAssignee?: boolean; initialAssignee?: string }) {
+export function CuentasClient({ showAssignee = false, initialAssignee = "", meId = "" }: { showAssignee?: boolean; initialAssignee?: string; meId?: string }) {
   const supa = useMemo(() => supabaseBrowser(), []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
@@ -51,6 +51,16 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "" }: { 
     }
     return Array.from(set.entries()).sort((x, y) => x[1].localeCompare(y[1]));
   }, [accounts, names]);
+
+  async function requestUnassign(a: Account) {
+    const reason = window.prompt(`Solicitar desvinculación de "${a.name}".\nMotivo (opcional):`, "");
+    if (reason === null) return;
+    const { error } = await supa.from("unassign_requests").insert({
+      org_id: a.org_id, account_id: a.id, requested_by: meId, reason: reason || null,
+    });
+    if (error) { alert("No se pudo enviar la solicitud: " + error.message); return; }
+    setAccounts((prev) => prev.map((x) => (x.id === a.id ? ({ ...x, unassign_requested_at: new Date().toISOString() } as Account) : x)));
+  }
 
   async function toggleVisited(a: Account) {
     const next = !a.visited;
@@ -197,6 +207,7 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "" }: { 
                 </td>
                 <td className="px-3 py-2 font-medium">
                   <Link className="text-brand-700 hover:underline" href={`/cuentas/${a.id}`}>{a.name}</Link>
+                  {(a as { unassign_requested_at?: string }).unassign_requested_at && <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">desvinculación</span>}
                 </td>
                 <td className="px-3 py-2">{a.specialty ?? "—"}</td>
                 <td className="px-3 py-2">{a.institution ?? "—"}</td>
@@ -243,6 +254,12 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "" }: { 
                 {mail && <a className="btn-ghost btn-sm" href={mail}>Email</a>}
                 {maps && <a className="btn-ghost btn-sm" href={maps} target="_blank">Mapa</a>}
                 <Link className="btn-ghost btn-sm" href={`/cuentas/${a.id}`}>Editar</Link>
+                {(a as { assigned_user_id?: string }).assigned_user_id === meId && !(a as { unassign_requested_at?: string }).unassign_requested_at && (
+                  <button className="btn-ghost btn-sm text-amber-700" onClick={() => requestUnassign(a)}>Solicitar desvinculación</button>
+                )}
+                {(a as { unassign_requested_at?: string }).unassign_requested_at && (
+                  <span className="btn-sm rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Desvinculación solicitada</span>
+                )}
               </div>
             </div>
           );

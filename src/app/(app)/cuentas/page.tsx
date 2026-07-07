@@ -16,7 +16,7 @@ export default async function CuentasPage({ searchParams }: { searchParams: { re
   return (
     <>
       <WelcomeBanner name={name} />
-      <CuentasClient showAssignee={isManager} initialAssignee={initialAssignee} />
+      <CuentasClient showAssignee={isManager} initialAssignee={initialAssignee} meId={user?.id ?? ""} />
     </>
   );
 }

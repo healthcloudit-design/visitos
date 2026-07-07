@@ -13,6 +13,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const isManager = ["supervisor", "gerente", "org_admin", "platform_admin"].includes(role);
   const isAdmin = ["org_admin", "platform_admin"].includes(role);
 
+  let pendingUnassign = 0;
+  if (isManager) {
+    const { count } = await supa.from("unassign_requests").select("id", { count: "exact", head: true }).eq("status", "pendiente");
+    pendingUnassign = count ?? 0;
+  }
+
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
@@ -29,6 +35,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               )}
               {isManager && (
                 <Link href="/reporte" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Reporte</Link>
+              )}
+              {isManager && (
+                <Link href="/equipo/solicitudes" className="text-gray-600 hover:text-brand-700">
+                  Solicitudes{pendingUnassign > 0 ? ` (${pendingUnassign})` : ""}
+                </Link>
               )}
               {isManager && (
                 <Link href="/importar" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Importar</Link>
