@@ -28,6 +28,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
                 <Link href="/equipo" className="font-medium text-gray-700 hover:text-brand-700">Equipo</Link>
               )}
               {isManager && (
+                <Link href="/reporte" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Reporte</Link>
+              )}
+              {isManager && (
                 <Link href="/importar" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Importar</Link>
               )}
               {isAdmin && (

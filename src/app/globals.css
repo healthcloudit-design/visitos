@@ -16,3 +16,12 @@
   .card { @apply rounded-xl border border-gray-200 bg-white p-4 shadow-sm; }
   .badge { @apply inline-block rounded-full px-2 py-0.5 text-xs font-medium; }
 }
+
+@media print {
+  header { display: none !important; }
+  .no-print { display: none !important; }
+  main { padding: 0 !important; max-width: none !important; }
+  body { background: #ffffff !important; }
+  .card, .h-72 { break-inside: avoid; }
+  #reporte { border: none !important; padding: 0 !important; }
+}
