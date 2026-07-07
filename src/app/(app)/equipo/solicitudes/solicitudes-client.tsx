@@ -1,11 +1,13 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type Req = { id: string; account_id: string; requested_by: string; reason: string | null; created_at: string };
 
 export function SolicitudesClient({ meId }: { meId: string }) {
   const supa = useMemo(() => supabaseBrowser(), []);
+  const router = useRouter();
   const [reqs, setReqs] = useState<Req[]>([]);
   const [accs, setAccs] = useState<Record<string, string>>({});
   const [profs, setProfs] = useState<Record<string, string>>({});
@@ -31,6 +33,7 @@ export function SolicitudesClient({ meId }: { meId: string }) {
     setMsg(error ? `Error: ${error.message}` : status === "aprobada" ? "Desvinculada ✓" : "Rechazada");
     setTimeout(() => setMsg(null), 1800);
     if (error) load();
+    else router.refresh();
   }
 
   if (loading) return <p className="text-sm text-gray-500">Cargando solicitudes…</p>;

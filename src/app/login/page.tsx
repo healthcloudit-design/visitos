@@ -29,7 +29,7 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
-    router.push("/cuentas");
+    router.push("/");
     router.refresh();
   }
 
