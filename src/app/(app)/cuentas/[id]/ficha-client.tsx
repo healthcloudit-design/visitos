@@ -8,6 +8,7 @@ import { AccountForm, type AccountPayload } from "@/components/account-form";
 import { StatusBadge } from "@/components/status-badge";
 
 interface Visit { id: string; visited_at: string; geo_result: string; notes: string | null; }
+interface Delivery { id: string; product: string; quantity: number; delivered_at: string; user_id: string; }
 
 export function FichaClient({ id }: { id: string }) {
   const supa = useMemo(() => supabaseBrowser(), []);
@@ -16,21 +17,29 @@ export function FichaClient({ id }: { id: string }) {
   const [logs, setLogs] = useState<ChangeLog[]>([]);
   const [visits, setVisits] = useState<Visit[]>([]);
   const [newNote, setNewNote] = useState("");
+  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [newProduct, setNewProduct] = useState("");
+  const [newQty, setNewQty] = useState("1");
   const [saving, setSaving] = useState(false);
   const [savedOk, setSavedOk] = useState(false);
   const [loading, setLoading] = useState(true);
 
   async function load() {
-    const [a, n, l, v] = await Promise.all([
+    const [a, n, l, v, d, pr] = await Promise.all([
       supa.from("accounts").select("*").eq("id", id).single(),
       supa.from("notes").select("*").eq("account_id", id).order("created_at", { ascending: false }),
       supa.from("change_logs").select("*").eq("account_id", id).order("created_at", { ascending: false }).limit(100),
-      supa.from("visits").select("id,visited_at,geo_result,notes").eq("account_id", id).order("visited_at", { ascending: false })
+      supa.from("visits").select("id,visited_at,geo_result,notes").eq("account_id", id).order("visited_at", { ascending: false }),
+      supa.from("deliveries").select("id,product,quantity,delivered_at,user_id").eq("account_id", id).order("delivered_at", { ascending: false }),
+      supa.from("profiles").select("id, full_name"),
     ]);
     if (a.data) setAccount(a.data as Account);
     setNotes((n.data ?? []) as Note[]);
     setLogs((l.data ?? []) as ChangeLog[]);
     setVisits((v.data ?? []) as Visit[]);
+    setDeliveries((d.data ?? []) as Delivery[]);
+    if (pr.data) setNames(Object.fromEntries((pr.data as { id: string; full_name: string }[]).map((x) => [x.id, x.full_name])));
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [id]);
@@ -51,6 +60,23 @@ export function FichaClient({ id }: { id: string }) {
       org_id: account.org_id, account_id: id, user_id: user.id, body: newNote.trim()
     });
     if (!error) { setNewNote(""); load(); }
+  }
+
+  async function addDelivery() {
+    if (!newProduct.trim() || !account) return;
+    const { data: { user } } = await supa.auth.getUser();
+    if (!user) return;
+    const qty = Math.max(1, parseInt(newQty || "1", 10) || 1);
+    const { error } = await supa.from("deliveries").insert({
+      org_id: account.org_id, account_id: id, user_id: user.id, product: newProduct.trim(), quantity: qty,
+    });
+    if (error) { alert("No se pudo registrar: " + error.message); return; }
+    setNewProduct(""); setNewQty("1"); load();
+  }
+
+  async function deleteDelivery(did: string) {
+    const { error } = await supa.from("deliveries").delete().eq("id", did);
+    if (!error) load();
   }
 
   if (loading) return <p className="py-10 text-center text-gray-400">Cargando…</p>;
@@ -82,6 +108,30 @@ export function FichaClient({ id }: { id: string }) {
         <h2 className="mb-3 font-semibold">Datos de la cuenta</h2>
         {savedOk && <p className="mb-2 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-700">Cambios guardados.</p>}
         <AccountForm initial={account} onSave={save} saving={saving} />
+      </div>
+
+      <div className="card">
+        <h2 className="mb-3 font-semibold">Productos / muestras entregados</h2>
+        <div className="mb-3 flex flex-wrap gap-2">
+          <input className="input min-w-0 flex-1" placeholder="Producto o muestra (ej: Effaclar Duo)"
+            value={newProduct} onChange={(e) => setNewProduct(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && addDelivery()} />
+          <input className="input w-20" type="number" min="1" step="1" value={newQty}
+            onChange={(e) => setNewQty(e.target.value)} />
+          <button className="btn-primary shrink-0" onClick={addDelivery}>Registrar</button>
+        </div>
+        <ul className="space-y-1 text-sm">
+          {deliveries.map((d) => (
+            <li key={d.id} className="flex items-center justify-between border-b border-gray-100 py-1.5 last:border-0">
+              <span><b>{d.quantity}×</b> {d.product}</span>
+              <span className="flex items-center gap-2 text-xs text-gray-400">
+                {names[d.user_id] ?? ""} · {fmtDateTime(d.delivered_at)}
+                <button className="text-red-400 hover:text-red-600" onClick={() => deleteDelivery(d.id)} title="Eliminar">✕</button>
+              </span>
+            </li>
+          ))}
+          {deliveries.length === 0 && <p className="text-sm text-gray-400">Todavía no registraste entregas en este consultorio.</p>}
+        </ul>
       </div>
 
       <div className="card">
