@@ -2,19 +2,25 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/logout-button";
+import { hasFeature } from "@/lib/plan";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supa = supabaseServer();
   const { data: { user } } = await supa.auth.getUser();
   if (!user) redirect("/login");
-  const { data: profile } = await supa.from("profiles").select("full_name, lab, role").eq("id", user.id).single();
+  const { data: profile } = await supa.from("profiles").select("full_name, lab, role, org:organizations(plan)").eq("id", user.id).single();
 
   const role = profile?.role ?? "rep";
   const isManager = ["supervisor", "gerente", "org_admin", "platform_admin"].includes(role);
   const isAdmin = ["org_admin", "platform_admin"].includes(role);
+  const plan = (profile as { org?: { plan?: string } } | null)?.org?.plan ?? "individual";
+  const canEquipo = isManager && hasFeature(plan, "equipo");
+  const canReporte = isManager && hasFeature(plan, "reporte");
+  const canSolicitudes = isManager && hasFeature(plan, "solicitudes");
+  const canUsuarios = isAdmin && hasFeature(plan, "usuarios");
 
   let pendingUnassign = 0;
-  if (isManager) {
+  if (canSolicitudes) {
     const { count } = await supa.from("unassign_requests").select("id", { count: "exact", head: true }).eq("status", "pendiente");
     pendingUnassign = count ?? 0;
   }
@@ -30,13 +36,13 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <nav className="flex items-center gap-4 text-sm">
               <Link href="/cuentas" className="text-gray-600 hover:text-brand-700">Cuentas</Link>
               <Link href="/cumpleanos" className="text-gray-600 hover:text-brand-700">Cumpleaños</Link>
-              {isManager && (
+              {canEquipo && (
                 <Link href="/equipo" className="font-medium text-gray-700 hover:text-brand-700">Equipo</Link>
               )}
-              {isManager && (
+              {canReporte && (
                 <Link href="/reporte" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Reporte</Link>
               )}
-              {isManager && (
+              {canSolicitudes && (
                 <Link href="/equipo/solicitudes" className="text-gray-600 hover:text-brand-700">
                   Solicitudes{pendingUnassign > 0 ? ` (${pendingUnassign})` : ""}
                 </Link>
@@ -44,7 +50,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               {isManager && (
                 <Link href="/importar" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Importar</Link>
               )}
-              {isAdmin && (
+              {canUsuarios && (
                 <Link href="/equipo/usuarios" className="hidden text-gray-600 hover:text-brand-700 sm:inline">Usuarios</Link>
               )}
             </nav>

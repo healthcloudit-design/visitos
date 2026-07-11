@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
+import { hasFeature } from "@/lib/plan";
 import { ReporteClient } from "./reporte-client";
 
 export default async function ReportePage() {
@@ -11,7 +12,8 @@ export default async function ReportePage() {
   const role = p?.role ?? "rep";
   if (!["supervisor", "gerente", "org_admin", "platform_admin"].includes(role)) redirect("/cuentas");
   const { data: org } = p?.org_id
-    ? await supa.from("organizations").select("name").eq("id", p.org_id).single()
+    ? await supa.from("organizations").select("name, plan").eq("id", p.org_id).single()
     : { data: null };
+  if (!hasFeature((org as { plan?: string } | null)?.plan, "reporte")) redirect("/cuentas");
   return <ReporteClient meName={p?.full_name ?? ""} lab={p?.lab ?? null} orgName={(org as { name?: string } | null)?.name ?? ""} />;
 }
