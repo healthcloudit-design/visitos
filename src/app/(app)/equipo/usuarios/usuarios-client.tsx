@@ -127,9 +127,13 @@ export function UsuariosClient({ isPlatform = false }: { isPlatform?: boolean })
               <tr key={p.id} className="border-t border-gray-100">
                 <td className="px-4 py-2 font-medium text-gray-800">{p.full_name}</td>
                 <td className="px-4 py-2">
-                  <select className="input py-1" value={p.role} onChange={(e) => update(p.id, { role: e.target.value })}>
-                    {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                  </select>
+                  {p.role === "platform_admin" ? (
+                    <span className="text-xs font-medium text-gray-500">Plataforma</span>
+                  ) : (
+                    <select className="input py-1" value={p.role} onChange={(e) => update(p.id, { role: e.target.value })}>
+                      {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                    </select>
+                  )}
                 </td>
                 <td className="px-4 py-2">
                   <select className="input py-1" value={p.manager_id ?? ""} onChange={(e) => update(p.id, { manager_id: e.target.value || null })}>
