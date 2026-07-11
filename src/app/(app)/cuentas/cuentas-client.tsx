@@ -14,6 +14,7 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
   const supa = useMemo(() => supabaseBrowser(), []);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [names, setNames] = useState<Record<string, string>>({});
+  const [reps, setReps] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [q, setQ] = useState("");
   const [fZone, setFZone] = useState("");
@@ -37,8 +38,12 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
 
   useEffect(() => {
     if (!showAssignee) return;
-    supa.from("profiles").select("id, full_name").then(({ data }) => {
-      if (data) setNames(Object.fromEntries((data as { id: string; full_name: string }[]).map((p) => [p.id, p.full_name])));
+    supa.from("profiles").select("id, full_name, role").then(({ data }) => {
+      if (data) {
+        const rows = data as { id: string; full_name: string; role: string }[];
+        setNames(Object.fromEntries(rows.map((p) => [p.id, p.full_name])));
+        setReps(rows.filter((p) => p.role === "rep").map((p) => ({ id: p.id, name: p.full_name })));
+      }
     });
   }, [supa, showAssignee]);
 
@@ -60,6 +65,13 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
     });
     if (error) { alert("No se pudo enviar la solicitud: " + error.message); return; }
     setAccounts((prev) => prev.map((x) => (x.id === a.id ? ({ ...x, unassign_requested_at: new Date().toISOString() } as Account) : x)));
+  }
+
+  async function reassign(a: Account, userId: string) {
+    const val = userId || null;
+    setAccounts((prev) => prev.map((x) => (x.id === a.id ? ({ ...x, assigned_user_id: val } as Account) : x)));
+    const { error } = await supa.from("accounts").update({ assigned_user_id: val }).eq("id", a.id);
+    if (error) { alert("No se pudo reasignar: " + error.message); load(); }
   }
 
   async function toggleVisited(a: Account) {
@@ -215,7 +227,14 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
                 <td className="px-3 py-2">{zone(a) || "—"}</td>
                 <td className="px-3 py-2">{a.phone ?? "—"}</td>
                 <td className="max-w-[180px] truncate px-3 py-2">{a.email ?? "—"}</td>
-                {showAssignee && <td className="px-3 py-2 font-medium text-brand-700">{assigneeName(a)}</td>}
+                {showAssignee && (
+                  <td className="px-3 py-2">
+                    <select className="input py-1 text-xs" value={(a as { assigned_user_id?: string }).assigned_user_id ?? ""} onChange={(e) => reassign(a, e.target.value)}>
+                      <option value="">Sin asignar</option>
+                      {reps.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                    </select>
+                  </td>
+                )}
                 <td className="px-3 py-2">{fmtBirthday(a.birthday)}</td>
                 <td className="px-3 py-2">{a.last_visit_at ? fmtDate(a.last_visit_at.split("T")[0]) : "—"}</td>
                 <td className="px-3 py-2"><StatusBadge status={a.status} /></td>
@@ -244,7 +263,12 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
               </p>
               <p className="text-sm text-gray-500">{[a.address, zone(a)].filter(Boolean).join(" · ")}</p>
               <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                {showAssignee && <span className="rounded bg-brand-50 px-1.5 py-0.5 font-medium text-brand-700">Asignado: {assigneeName(a)}</span>}
+                {showAssignee && (
+                  <select className="input !w-auto py-0.5 text-xs" value={(a as { assigned_user_id?: string }).assigned_user_id ?? ""} onChange={(e) => reassign(a, e.target.value)}>
+                    <option value="">Sin asignar</option>
+                    {reps.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+                  </select>
+                )}
                 <span>Cumple: {fmtBirthday(a.birthday)}</span>
                 <StatusBadge status={a.status} />
               </div>
