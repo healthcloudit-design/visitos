@@ -3,20 +3,35 @@ import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
 type Prof = { id: string; full_name: string; role: string; manager_id: string | null; active: boolean };
+type Org = { id: string; name: string };
 const ROLES: [string, string][] = [
   ["rep", "Visitador"], ["supervisor", "Supervisor"], ["gerente", "Gerente"],
   ["org_admin", "Admin"], ["viewer", "Lectura"],
 ];
 
-export function UsuariosClient() {
+export function UsuariosClient({ isPlatform = false }: { isPlatform?: boolean }) {
   const supa = useMemo(() => supabaseBrowser(), []);
   const [profiles, setProfiles] = useState<Prof[]>([]);
+  const [orgs, setOrgs] = useState<Org[]>([]);
   const [loading, setLoading] = useState(true);
   const [msg, setMsg] = useState<string | null>(null);
+
+  const [fName, setFName] = useState("");
+  const [fEmail, setFEmail] = useState("");
+  const [fRole, setFRole] = useState("rep");
+  const [fManager, setFManager] = useState("");
+  const [fOrg, setFOrg] = useState("");
+  const [creating, setCreating] = useState(false);
+  const [created, setCreated] = useState<{ email: string; password: string } | null>(null);
+  const [formErr, setFormErr] = useState<string | null>(null);
 
   async function load() {
     const { data } = await supa.from("profiles").select("id, full_name, role, manager_id, active").order("full_name");
     if (data) setProfiles(data as Prof[]);
+    if (isPlatform) {
+      const { data: o } = await supa.from("organizations").select("id, name").order("name");
+      if (o) { setOrgs(o as Org[]); setFOrg((prev) => prev || (o[0] as Org)?.id || ""); }
+    }
     setLoading(false);
   }
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, []);
@@ -34,6 +49,23 @@ export function UsuariosClient() {
     if (error) load();
   }
 
+  async function createUser() {
+    setFormErr(null); setCreated(null);
+    if (!fName.trim() || !fEmail.trim()) { setFormErr("Completá nombre y email."); return; }
+    setCreating(true);
+    const body: Record<string, unknown> = {
+      full_name: fName.trim(), email: fEmail.trim(), role: fRole, manager_id: fManager || null,
+    };
+    if (isPlatform && fOrg) body.org_id = fOrg;
+    const { data, error } = await supa.functions.invoke("admin-create-user", { body });
+    setCreating(false);
+    if (error) { setFormErr(error.message); return; }
+    if (!data?.ok) { setFormErr(data?.error ?? "No se pudo crear."); return; }
+    setCreated({ email: data.email, password: data.password });
+    setFName(""); setFEmail(""); setFRole("rep"); setFManager("");
+    load();
+  }
+
   if (loading) return <p className="text-sm text-gray-500">Cargando usuarios…</p>;
 
   return (
@@ -44,6 +76,40 @@ export function UsuariosClient() {
           <p className="text-sm text-gray-500">{profiles.length} en tu organización</p>
         </div>
         {msg && <span className="text-xs text-gray-500">{msg}</span>}
+      </div>
+
+      <div className="card">
+        <h2 className="mb-3 font-semibold">Nuevo usuario</h2>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <input className="input" placeholder="Nombre y apellido" value={fName} onChange={(e) => setFName(e.target.value)} />
+          <input className="input" type="email" placeholder="Email" value={fEmail} onChange={(e) => setFEmail(e.target.value)} />
+          <select className="input" value={fRole} onChange={(e) => setFRole(e.target.value)}>
+            {ROLES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+          </select>
+          <select className="input" value={fManager} onChange={(e) => setFManager(e.target.value)}>
+            <option value="">Supervisor (opcional)</option>
+            {managers.map((m) => <option key={m.id} value={m.id}>{m.full_name}</option>)}
+          </select>
+          {isPlatform && (
+            <select className="input" value={fOrg} onChange={(e) => setFOrg(e.target.value)}>
+              {orgs.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+            </select>
+          )}
+        </div>
+        <div className="mt-3 flex items-center gap-3">
+          <button className="btn-primary" onClick={createUser} disabled={creating}>
+            {creating ? "Creando…" : "Crear usuario"}
+          </button>
+          {formErr && <span className="text-sm text-red-600">{formErr}</span>}
+        </div>
+        {created && (
+          <div className="mt-3 rounded-lg border border-green-200 bg-green-50 p-3 text-sm">
+            <p className="font-medium text-green-800">Usuario creado ✓</p>
+            <p className="mt-1 text-green-700">Email: <b>{created.email}</b></p>
+            <p className="text-green-700">Contraseña temporal: <b className="font-mono">{created.password}</b></p>
+            <p className="mt-1 text-xs text-green-600">Pasásela al usuario; que la cambie al primer ingreso.</p>
+          </div>
+        )}
       </div>
 
       <div className="card overflow-x-auto p-0">
@@ -79,9 +145,7 @@ export function UsuariosClient() {
           </tbody>
         </table>
       </div>
-      <p className="text-xs text-gray-400">
-        Cambiás rol, supervisor y estado en el momento. El alta de un nuevo login todavía se hace desde el panel de Praxis (requiere provisión de administrador).
-      </p>
+      <p className="text-xs text-gray-400">El alta crea el login al instante con una contraseña temporal. Rol, supervisor y estado se cambian en el momento.</p>
     </div>
   );
 }

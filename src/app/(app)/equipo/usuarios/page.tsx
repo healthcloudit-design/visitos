@@ -7,6 +7,7 @@ export default async function UsuariosPage() {
   const { data: { user } } = await supa.auth.getUser();
   if (!user) redirect("/login");
   const { data: profile } = await supa.from("profiles").select("role").eq("id", user.id).single();
-  if (!["org_admin", "platform_admin"].includes(profile?.role ?? "")) redirect("/cuentas");
-  return <UsuariosClient />;
+  const role = (profile as { role?: string } | null)?.role ?? "rep";
+  if (!["org_admin", "platform_admin"].includes(role)) redirect("/cuentas");
+  return <UsuariosClient isPlatform={role === "platform_admin"} />;
 }
