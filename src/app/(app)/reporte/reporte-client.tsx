@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "@/components/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -62,7 +63,14 @@ export function ReporteClient({ meName, lab, orgName }: { meName: string; lab: s
 
   const fecha = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" });
 
-  if (loading) return <p className="text-sm text-gray-500">Cargando reporte…</p>;
+  if (loading)
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-9 w-48" />
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-lg" />)}</div>
+        <div className="grid gap-4 md:grid-cols-2"><Skeleton className="h-72 w-full rounded-xl" /><Skeleton className="h-72 w-full rounded-xl" /></div>
+      </div>
+    );
 
   return (
     <div className="space-y-5">

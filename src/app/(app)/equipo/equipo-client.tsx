@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "@/components/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { PieChart, Pie, Cell } from "recharts";
@@ -88,7 +89,15 @@ export function EquipoClient({ meId, meName }: { meId: string; meName: string })
     return { total, vis, pend: total - vis, pct: total ? Math.round((vis / total) * 100) : 0, reps };
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Cargando equipo…</p>;
+  if (loading)
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-28 w-full rounded-xl" />
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-24 w-full rounded-xl" />)}
+        </div>
+      </div>
+    );
 
   const focusId = path.length ? path[path.length - 1].id : meId;
   let children = childrenOf[focusId] ?? [];

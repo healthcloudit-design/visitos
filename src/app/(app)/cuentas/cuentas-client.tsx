@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "@/components/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -50,6 +51,13 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
       }
     });
   }, [supa, showAssignee]);
+
+  useEffect(() => {
+    if (!unassignTarget) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setUnassignTarget(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [unassignTarget]);
 
   const assigneeName = (a: Account) => names[(a as { assigned_user_id?: string }).assigned_user_id ?? ""] ?? "Sin asignar";
   const assignees = useMemo(() => {
@@ -134,7 +142,20 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
   const visitedCount = accounts.filter((a) => a.visited).length;
   const pct = accounts.length ? Math.round((visitedCount / accounts.length) * 100) : 0;
 
-  if (loading) return <p className="py-10 text-center text-gray-400">Cargando cuentas…</p>;
+  if (loading)
+    return (
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <div key={i} className="card !p-3 text-center"><Skeleton className="mx-auto h-7 w-12" /><Skeleton className="mx-auto mt-2 h-3 w-16" /></div>
+          ))}
+        </div>
+        <Skeleton className="h-10 w-full max-w-xs" />
+        <div className="space-y-2">
+          {Array.from({ length: 7 }).map((_, i) => <Skeleton key={i} className="h-14 w-full" />)}
+        </div>
+      </div>
+    );
 
   return (
     <div className="space-y-4">
@@ -300,13 +321,13 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
 
       {unassignTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setUnassignTarget(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-base font-semibold text-gray-800">Solicitar desvinculación</h3>
+          <div role="dialog" aria-modal="true" aria-labelledby="unassign-title" className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 id="unassign-title" className="text-base font-semibold text-gray-800">Solicitar desvinculación</h3>
             <p className="mt-1 text-sm text-gray-500">
               Vas a pedir que <b className="text-gray-700">{unassignTarget.name}</b> deje de estar asignada a vos. Tu supervisor lo va a autorizar.
             </p>
             <label className="lbl mt-3">Motivo (opcional)</label>
-            <textarea className="input min-h-[80px]" value={unassignReason} onChange={(e) => setUnassignReason(e.target.value)}
+            <textarea autoFocus className="input min-h-[80px]" value={unassignReason} onChange={(e) => setUnassignReason(e.target.value)}
               placeholder="Ej: me avisaron que no la visite más" />
             {unassignErr && <p className="mt-1 text-sm text-red-600">{unassignErr}</p>}
             <div className="mt-4 flex justify-end gap-2">

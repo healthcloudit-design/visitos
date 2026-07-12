@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "@/components/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -79,7 +80,14 @@ export function FichaClient({ id }: { id: string }) {
     if (!error) load();
   }
 
-  if (loading) return <p className="py-10 text-center text-gray-400">Cargando…</p>;
+  if (loading)
+    return (
+      <div className="mx-auto max-w-3xl space-y-4">
+        <Skeleton className="h-8 w-56" />
+        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-32 w-full rounded-xl" />
+      </div>
+    );
   if (!account) return <p className="py-10 text-center text-gray-400">Cuenta no encontrada.</p>;
 
   const tel = telHref(account), wa = waHref(account), mail = mailHref(account), maps = mapsHref(account);

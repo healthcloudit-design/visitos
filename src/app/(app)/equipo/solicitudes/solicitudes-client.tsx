@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "@/components/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
@@ -36,7 +37,13 @@ export function SolicitudesClient({ meId }: { meId: string }) {
     else router.refresh();
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Cargando solicitudes…</p>;
+  if (loading)
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-9 w-64" />
+        {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+      </div>
+    );
 
   return (
     <div className="space-y-4">

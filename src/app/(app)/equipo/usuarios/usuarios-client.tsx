@@ -1,4 +1,5 @@
 "use client";
+import { Skeleton } from "@/components/skeleton";
 import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase/client";
 
@@ -66,7 +67,14 @@ export function UsuariosClient({ isPlatform = false }: { isPlatform?: boolean })
     load();
   }
 
-  if (loading) return <p className="text-sm text-gray-500">Cargando usuarios…</p>;
+  if (loading)
+    return (
+      <div className="space-y-4">
+        <Skeleton className="h-9 w-40" />
+        <Skeleton className="h-40 w-full rounded-xl" />
+        <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+      </div>
+    );
 
   return (
     <div className="space-y-4">

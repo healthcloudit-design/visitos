@@ -159,7 +159,7 @@ export function dedupeKey(name: string, address: string | null): string {
 }
 
 // ── Exportación ──────────────────────────────────────────────────────
-export function exportAccounts(accounts: Account[], fileName = "visitos_cuentas.xlsx") {
+export function exportAccounts(accounts: Account[], fileName = "praxis_visita_cuentas.xlsx") {
   const data = accounts.map((a) => ({
     NOMBRE: a.name,
     ESPECIALIDAD: a.specialty ?? "",
