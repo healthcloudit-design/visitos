@@ -58,7 +58,7 @@ export function WelcomeBanner({ name }: { name: string }) {
             {pod ? GREETING[p] : "Hola"},
           </p>
           <h1 className="truncate text-2xl font-bold tracking-tight sm:text-3xl">{name}</h1>
-          <p className="mt-0.5 text-xs capitalize text-white/60">{today}</p>
+          <p className="mt-0.5 text-xs text-white/60 first-letter:uppercase">{today}</p>
         </div>
       </div>
     </section>

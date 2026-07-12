@@ -24,6 +24,10 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
   const [fMissing, setFMissing] = useState<MissingFilter>("");
   const [fAssignee, setFAssignee] = useState(initialAssignee);
   const [sort, setSort] = useState<SortKey>("name");
+  const [unassignTarget, setUnassignTarget] = useState<Account | null>(null);
+  const [unassignReason, setUnassignReason] = useState("");
+  const [unassignSaving, setUnassignSaving] = useState(false);
+  const [unassignErr, setUnassignErr] = useState<string | null>(null);
 
   async function load() {
     const { data, error } = await supa
@@ -57,14 +61,17 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
     return Array.from(set.entries()).sort((x, y) => x[1].localeCompare(y[1]));
   }, [accounts, names]);
 
-  async function requestUnassign(a: Account) {
-    const reason = window.prompt(`Solicitar desvinculación de "${a.name}".\nMotivo (opcional):`, "");
-    if (reason === null) return;
+  async function confirmUnassign() {
+    const a = unassignTarget;
+    if (!a) return;
+    setUnassignSaving(true); setUnassignErr(null);
     const { error } = await supa.from("unassign_requests").insert({
-      org_id: a.org_id, account_id: a.id, requested_by: meId, reason: reason || null,
+      org_id: a.org_id, account_id: a.id, requested_by: meId, reason: unassignReason.trim() || null,
     });
-    if (error) { alert("No se pudo enviar la solicitud: " + error.message); return; }
+    setUnassignSaving(false);
+    if (error) { setUnassignErr(error.message); return; }
     setAccounts((prev) => prev.map((x) => (x.id === a.id ? ({ ...x, unassign_requested_at: new Date().toISOString() } as Account) : x)));
+    setUnassignTarget(null); setUnassignReason("");
   }
 
   async function reassign(a: Account, userId: string) {
@@ -279,7 +286,7 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
                 {maps && <a className="btn-ghost btn-sm" href={maps} target="_blank">Mapa</a>}
                 <Link className="btn-ghost btn-sm" href={`/cuentas/${a.id}`}>Editar</Link>
                 {(a as { assigned_user_id?: string }).assigned_user_id === meId && !(a as { unassign_requested_at?: string }).unassign_requested_at && (
-                  <button className="btn-ghost btn-sm text-amber-700" onClick={() => requestUnassign(a)}>Solicitar desvinculación</button>
+                  <button className="btn-ghost btn-sm text-amber-700" onClick={() => { setUnassignTarget(a); setUnassignReason(""); setUnassignErr(null); }}>Solicitar desvinculación</button>
                 )}
                 {(a as { unassign_requested_at?: string }).unassign_requested_at && (
                   <span className="btn-sm rounded-lg bg-amber-100 px-2 py-1 text-xs font-medium text-amber-700">Desvinculación solicitada</span>
@@ -290,6 +297,27 @@ export function CuentasClient({ showAssignee = false, initialAssignee = "", meId
         })}
         {filtered.length === 0 && <p className="p-6 text-center text-gray-400">Sin resultados con estos filtros.</p>}
       </div>
+
+      {unassignTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setUnassignTarget(null)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-semibold text-gray-800">Solicitar desvinculación</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Vas a pedir que <b className="text-gray-700">{unassignTarget.name}</b> deje de estar asignada a vos. Tu supervisor lo va a autorizar.
+            </p>
+            <label className="lbl mt-3">Motivo (opcional)</label>
+            <textarea className="input min-h-[80px]" value={unassignReason} onChange={(e) => setUnassignReason(e.target.value)}
+              placeholder="Ej: me avisaron que no la visite más" />
+            {unassignErr && <p className="mt-1 text-sm text-red-600">{unassignErr}</p>}
+            <div className="mt-4 flex justify-end gap-2">
+              <button className="btn-ghost" onClick={() => setUnassignTarget(null)}>Cancelar</button>
+              <button className="btn-primary" onClick={confirmUnassign} disabled={unassignSaving}>
+                {unassignSaving ? "Enviando…" : "Solicitar"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
