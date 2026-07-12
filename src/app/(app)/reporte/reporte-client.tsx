@@ -172,7 +172,7 @@ export function ReporteClient({ meName, lab, orgName }: { meName: string; lab: s
         </Panel>
 
         <p className="border-t border-gray-100 pt-3 text-center text-[11px] text-gray-400">
-          Praxis Operativa · VisitOS — www.praxisoperativa.com · contacto@praxisoperativa.com
+          PRAXIS Visita · Praxis Platform — www.praxisoperativa.com · contacto@praxisoperativa.com
         </p>
       </div>
     </div>

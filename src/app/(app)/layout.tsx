@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { supabaseServer } from "@/lib/supabase/server";
 import { LogoutButton } from "@/components/logout-button";
 import { hasFeature } from "@/lib/plan";
+import { Wordmark } from "@/components/brand";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const supa = supabaseServer();
@@ -30,8 +31,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <header className="sticky top-0 z-20 border-b border-gray-200 bg-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2.5">
           <div className="flex items-center gap-5">
-            <Link href="/cuentas" className="text-lg font-bold text-brand-700">
-              Visit<span className="text-gold-500">OS</span>
+            <Link href="/cuentas" aria-label="PRAXIS Visita">
+              <Wordmark iconClass="h-7 w-7" textClass="text-base" />
             </Link>
             <nav className="flex items-center gap-4 text-sm">
               <Link href="/cuentas" className="text-gray-600 hover:text-brand-700">Cuentas</Link>
